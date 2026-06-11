@@ -1,5 +1,5 @@
 from playwright.sync_api import Page, Locator
-from exception import RedirectError, ElementNotFound
+from ead.exception import RedirectError, ElementNotFound
 from typing import Dict
 from utils.cli import clear_console
 
@@ -25,7 +25,7 @@ class Home:
         login_btn = page.locator("#loginbtn")
         
         cpf_input.fill(cpf)
-        pass_input(password)
+        pass_input.fill(password)
         login_btn.click()
 
         if page.url == "https://ead.fieg.com.br/login/index.php":
@@ -46,11 +46,12 @@ class Home:
 
     def course_selector(self):
         opts: Dict[int, Locator] = {
-            index + 1: item for index, item in self.courses
+            index + 1: item for index, item in enumerate(self.courses)
         }
         while(True):
             print(f"Selecione um curso: ")
-            first = 0, last = 1
+            first = 0
+            last = 1
             print(f"    0 - sair")
             for i, l in opts.items():
                 if i > last: last = i
