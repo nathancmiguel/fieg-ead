@@ -68,8 +68,14 @@ class Home:
                     print("Opção invalida!")
                     clear_console()
                     continue
+
+                if opt == 0:
+                    break
             
-            print(f"{opts[opt]}")
+            
+            course = opts[opt]
+            course.click()
+            clear_console()
             
             
             

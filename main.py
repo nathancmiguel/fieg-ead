@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright, Playwright, Browser, BrowserContext, Page, Locator
 import time
 from ead.home import Home
-from ead.content import Content
+from ead.course import Course
 
 load_dotenv()
 

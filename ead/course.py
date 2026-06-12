@@ -1,6 +1,6 @@
 from playwright.sync_api import Page, Locator
 
-class Content:
+class Course:
     def __init__(self, page: Page):
         self.__page = page
         self.__exams: list[Locator] = []
