@@ -2,6 +2,8 @@ import os
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright, Playwright, Browser, BrowserContext, Page, Locator
 import time
+
+from ead.exception import RedirectError, ElementNotFound
 from ead.home import Home
 from ead.course import Course
 
@@ -19,13 +21,17 @@ with sync_playwright() as pw:
     page.goto("https://ead.fieg.com.br/login/index.php")
     print(f"Entering with your account!")
     home = Home(page)
-    home.do_login(CPF, PASSWORD)
+    try:
+        home.do_login(CPF, PASSWORD)
 
-    # Course page
-    home.load_classes()
-    home.course_selector()
+        # Course page
+        home.load_classes()
+        home.course_selector()
+    except RedirectError as e:
+        print(e)
+    except ElementNotFound as e:
+        print(e)
 
-    time.sleep(4)
     browser.close()
 
 

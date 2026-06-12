@@ -1,19 +1,26 @@
+from ead.course import Course
 from playwright.sync_api import Page, Locator
 from ead.exception import RedirectError, ElementNotFound
 from typing import Dict
 from utils.cli import clear_console
 
+class CourseInfo:
+    def __init__(self, title: str, url: str):
+        self.title: str = title
+        self.url: str = url
+
 class Home:
     def __init__(self, page: Page):
         self.__page = page
-        self.__courses: list[Locator] = []
+        self.url = page.url
+        self.__courses: list[CourseInfo] = []
 
     @property
     def page(self) -> Page:
         return self.__page
     
     @property
-    def courses(self) -> list[Locator]:
+    def courses(self) -> list[CourseInfo]:
         return self.__courses
     
     def do_login(self, cpf: str, password: str):
@@ -42,29 +49,27 @@ class Home:
         
         for c in cards:
             locator = c.locator(".aalink.coursename.mr-2.mb-1").first
-            self.__courses.append(locator)
+            self.__courses.append(CourseInfo(locator.inner_text(), locator.get_attribute("href")))
 
     def course_selector(self):
-        opts: Dict[int, Locator] = {
+        opts: Dict[int, CourseInfo] = {
             index + 1: item for index, item in enumerate(self.courses)
         }
         while(True):
             print(f"Selecione um curso: ")
             first = 0
-            last = 1
-            print(f"    0 - sair")
-            for i, l in opts.items():
+            last = 0
+            for i, c in opts.items():
                 if i > last: last = i
-                print(f"    {i} - {l.inner_text()}")
-
+                print(f"    {i} - {c.title}")
             try:
-                opt = int(input("\nOpcao: "))
+                opt = int(input("\nOpcao( 0 - sair ): "))
             except TypeError as e:
                 print(f"Valor incorreto: {e}")
                 clear_console()
                 continue
             else:
-                if not (opt >= first and opt <= last):
+                if not (first <= opt <= last):
                     print("Opção invalida!")
                     clear_console()
                     continue
@@ -74,8 +79,15 @@ class Home:
             
             
             course = opts[opt]
-            course.click()
+            self.page.goto(course.url)
             clear_console()
+
+            course_page = Course(self.page)
+            course_page.load_exams()
+            course_page.exam_selector()
+
+            self.page.goto(self.url)
+            
             
             
             
