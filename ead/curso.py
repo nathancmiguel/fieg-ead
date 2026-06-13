@@ -1,78 +1,70 @@
 from ead.exception import ElementNotFound
-from ead.quiz import Quiz
+from ead.avalicao import Avaliacao
 from utils.cli import clear_console
 from typing import Dict
 from playwright.sync_api import Page, Locator
 
-class EvalInfo:
+class AvaInfo:
     def __init__(self, title: str, url: str):
         self.title = title
         self.url = url
         
 
-class Course:
-    def __init__(self, page: Page, theme: str):
-        self.__page = page
-        self.__exams: list[EvalInfo] = []
-        self.url = page.url
-        self.theme = theme
+class Curso:
+    def __init__(self, pagina: Page, tema: str):
+        self.pagina = pagina
+        self.avaliacoes: list[AvaInfo] = []
+        self.url = pagina.url
+        self.tema = tema
 
-    @property
-    def page(self) -> Page:
-        return self.__page
-    
-    @property
-    def exams(self) -> list[EvalInfo]:
-        return self.__exams
+    def buscar_avaliacoes(self):
+        pagina = self.pagina
+        avaliacoes: list[AvaInfo] = []
 
-    def load_exams(self):
-        page = self.page
-        exams: list[EvalInfo] = []
-
-        print(self.page.title())
+        print(self.pagina.title())
         print(f"Buscando avaliações")
 
-        table = page.locator('table[style="width: 100%; border-collapse: collapse; font-family: Arial,Helvetica,sans-serif;"]')
+        table = pagina.locator('table[style="width: 100%; border-collapse: collapse; font-family: Arial,Helvetica,sans-serif;"]')
         if table.is_visible():
             abtn = table.locator('a[href*="/mod/quiz/view.php"]').all()
             if len(abtn) > 0:
                 for a in abtn:
                     attr = a.get_attribute('href')
                     title = a.inner_text()
-                    exams.append(EvalInfo(title, attr))
+                    avaliacoes.append(AvaInfo(title, attr))
 
-        tree_view = page.locator("#tabs-tree-start")
+        tree_view = pagina.locator("#tabs-tree-start")
         wrapper = tree_view.locator(".tabs-wrapper")
 
-        course_content_btn = wrapper.get_by_title("Conteúdo do curso")
-        if course_content_btn.is_visible():
-            course_content_btn.click()
-            tab_body = page.locator(".onetopic-tab-body")
+        conteudo_btn = wrapper.get_by_title("Conteúdo do curso")
+        if conteudo_btn.is_visible():
+            conteudo_btn.click()
+            tab_body = pagina.locator(".onetopic-tab-body")
             abtn = tab_body.locator('a[href*="/mod/quiz/view.php"]').all()
             if len(abtn) > 0:
                 for a in abtn:
                     attr = a.get_attribute('href')
                     title = a.inner_text()
-                    exams.append(EvalInfo(title, attr))
+                    avaliacoes.append(AvaInfo(title, attr))
 
-        evaluation_btn = wrapper.get_by_title("Avaliação")
-        if evaluation_btn.is_visible():
-            evaluation_btn.click()
+        avaliacao_btn = wrapper.get_by_title("Avaliação")
+        if avaliacao_btn.is_visible():
+            avaliacao_btn.click()
             tab_body = tree_view.locator(".onetopic-tab-body")
             abtn = tab_body.locator('a[href*="/mod/quiz/view.php"]').all()
             if len(abtn) > 0:
                 for a in abtn:
                     attr = a.get_attribute('href')
                     title = a.inner_text()
-                    exams.append(EvalInfo(title, attr))
+                    avaliacoes.append(AvaInfo(title, attr))
 
-        if len(exams) == 0:
+        if len(avaliacoes) == 0:
             raise ElementNotFound("Nenhuma avaliação foi encontrada!")
-        self.__exams = exams
+        self.avaliacoes = avaliacoes
 
-    def exam_selector(self):
-        opts: Dict[int, EvalInfo] = {
-            index + 1: item for index, item in enumerate(self.exams)
+    def selecionar_curso(self):
+        opts: Dict[int, AvaInfo] = {
+            index + 1: item for index, item in enumerate(self.avaliacoes)
         }
         while(True):
             print(f"Selecione uma avaliação: ")
@@ -97,12 +89,12 @@ class Course:
                     break
             
             exam = opts[opt]
-            self.page.goto(exam.url)
+            self.pagina.goto(exam.url)
             clear_console()
             try:
-                c = Quiz(self.page, self.theme)
-                c.init_quiz()
+                c = Avaliacao(self.pagina, self.tema)
+                c.iniciar_avaliacao()
             except ElementNotFound as e:
                 print(e)
-            self.page.goto(self.url)
+            self.pagina.goto(self.url)
             clear_console()

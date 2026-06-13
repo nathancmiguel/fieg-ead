@@ -1,59 +1,54 @@
-from ead.course import Course
+from ead.curso import Curso
 from playwright.sync_api import Page, Locator
 from ead.exception import RedirectError, ElementNotFound
 from typing import Dict
 from utils.cli import clear_console
+from env import env
 
-class CourseInfo:
-    def __init__(self, title: str, url: str):
-        self.title: str = title
-        self.url: str = url
+class CursoInfo:
+    def __init__(self, titulo: str, url: str):
+        self.titulo = titulo
+        self.url = url
 
 class Home:
-    def __init__(self, page: Page):
-        self.__page = page
-        self.url = page.url
-        self.__courses: list[CourseInfo] = []
-
-    @property
-    def page(self) -> Page:
-        return self.__page
+    def __init__(self, pagina: Page):
+        self.pagina = pagina
+        self.url = pagina.url
+        self.cursos: list[CursoInfo] = []
     
-    @property
-    def courses(self) -> list[CourseInfo]:
-        return self.__courses
-    
-    def do_login(self, cpf: str, password: str):
+    def fazer_login(self):
         print(f"Realizando login!")
-        page = self.page
+        pagina = self.pagina
 
-        cpf_input = page.locator("#username")
-        pass_input = page.locator("#password")
-        login_btn = page.locator("#loginbtn")
+        cpf_input = pagina.locator("#username")
+        pass_input = pagina.locator("#password")
+        login_btn = pagina.locator("#loginbtn")
         
-        cpf_input.fill(cpf)
-        pass_input.fill(password)
+        cpf_input.fill(env.cpf)
+        pass_input.fill(env.senha)
         login_btn.click()
 
-        if page.url == "https://ead.fieg.com.br/login/index.php":
+        if pagina.url == "https://ead.fieg.com.br/login/index.php":
             raise RedirectError("O login pode ter falhado, verifique suas credenciais no arquivo .env")
         
-        if page.url != "https://ead.fieg.com.br":
-            page.goto("https://ead.fieg.com.br")
+        if pagina.url != "https://ead.fieg.com.br":
+            pagina.goto("https://ead.fieg.com.br")
 
-    def load_classes(self):
+    def buscar_cursos(self):
         print(f"Carregando cursos")
-        cards = self.page.locator(".card.dashboard-card").all()
+        pagina = self.pagina
+        cards = pagina.locator(".card.dashboard-card").all()
+
         if len(cards) == 0:
             raise ElementNotFound("Nenhum curso encontrado")
         
         for c in cards:
-            locator = c.locator(".aalink.coursename.mr-2.mb-1").first
-            self.__courses.append(CourseInfo(locator.inner_text(), locator.get_attribute("href")))
+            l = c.locator(".aalink.coursename.mr-2.mb-1")
+            self.cursos.append(CursoInfo(l.inner_text(), l.get_attribute("href")))
 
-    def course_selector(self):
-        opts: Dict[int, CourseInfo] = {
-            index + 1: item for index, item in enumerate(self.courses)
+    def seletor_curso(self):
+        opts: Dict[int, CursoInfo] = {
+            index + 1: item for index, item in enumerate(self.cursos)
         }
         while(True):
             print(f"Selecione um curso: ")
@@ -61,7 +56,7 @@ class Home:
             last = 0
             for i, c in opts.items():
                 if i > last: last = i
-                print(f"    {i} - {c.title}")
+                print(f"    {i} - {c.titulo}")
             try:
                 opt = int(input("\nOpcao( 0 - sair ): "))
             except TypeError as e:
@@ -76,17 +71,16 @@ class Home:
 
                 if opt == 0:
                     break
-            
-            
-            course = opts[opt]
-            self.page.goto(course.url)
+
+            curso = opts[opt]
+            self.pagina.goto(curso.url)
             clear_console()
 
-            course_page = Course(self.page, course.title)
-            course_page.load_exams()
-            course_page.exam_selector()
+            curso_pagina = Curso(self.pagina, curso.titulo)
+            curso_pagina.buscar_avaliacoes()
+            curso_pagina.selecionar_curso()
 
-            self.page.goto(self.url)
+            self.pagina.goto(self.url)
             
             
             
