@@ -11,10 +11,11 @@ class EvalInfo:
         
 
 class Course:
-    def __init__(self, page: Page):
+    def __init__(self, page: Page, theme: str):
         self.__page = page
         self.__exams: list[EvalInfo] = []
         self.url = page.url
+        self.theme = theme
 
     @property
     def page(self) -> Page:
@@ -99,7 +100,7 @@ class Course:
             self.page.goto(exam.url)
             clear_console()
             try:
-                c = Quiz(self.page)
+                c = Quiz(self.page, self.theme)
                 c.init_quiz()
             except ElementNotFound as e:
                 print(e)

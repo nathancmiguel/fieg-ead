@@ -82,7 +82,7 @@ class Home:
             self.page.goto(course.url)
             clear_console()
 
-            course_page = Course(self.page)
+            course_page = Course(self.page, course.title)
             course_page.load_exams()
             course_page.exam_selector()
 

@@ -1,9 +1,8 @@
 from typing import Dict
-
 from playwright.sync_api import Page, Locator
-
 from ead.exception import ElementNotFound
 from utils.cli import clear_console
+from utils.gemini import client
 
 class QuizReview:
     def __init__(self, question: str, answer: str):
@@ -16,61 +15,71 @@ class QuizChoices:
         self.text = text
 
 class Quiz:
-    def __init__(self, page: Page):
+    def __init__(self, page: Page, theme: str):
         self.page = page
         self.url = page.url
         self.reviews: Dict[int, QuizReview] = {}
+        self.theme = theme
 
     def init_quiz(self):
         clear_console()
         print("Iniciando quiz")
         page = self.page
 
-        while(True):
-            print("Buscando por revisao...")
-            # Detect review
-            tries = page.locator(".rounded.border.p-3").all()
-            if len(tries) > 0:
-                for t in tries:
-                    notas_box = t.locator(
-                        ".moove-infobox",
-                        has=t.locator(".moove-infobox-title", has_text="Notas")
-                    )
-
-                    if notas_box.count() == 0:
-                        continue
-
-                    notas_text = notas_box.locator(".moove-infobox-content--small").inner_text()
-                    notas_text = notas_text.strip()
-
-                    nota_obtida_text, nota_total_text = notas_text.split("/")
-
-                    nota_obtida = self._parse_brazilian_number(nota_obtida_text)
-                    nota_total = self._parse_brazilian_number(nota_total_text)
-
-                    if nota_obtida == nota_total:
-                        print("Voce ja obteve nota maxima")
-                        return
-
-                first_try = tries[1]
-                review = first_try.get_by_title("Analise as suas respostas a esta tentativa")
-                if not review.is_visible():
-                    raise ElementNotFound("Botao de acesso a revisao nao encontrado")
-
-                print("Coletando respostas da revisao...")
-                review.click()
-                self._get_answers()
-                page.goto(self.url)
-
-                print("Realizando questoes com as respostas da revisao...")
+        print("Buscando por revisao...")
+        # Detect review
+        tries = page.locator(".rounded.border.p-3").all()
+        if len(tries) > 0:
+            for t in tries:
+                notas_box = t.locator(
+                    ".moove-infobox",
+                    has=t.locator(".moove-infobox-title", has_text="Notas")
+                )
+                if notas_box.count() == 0:
+                    continue
+                notas_text = notas_box.locator(".moove-infobox-content--small").inner_text()
+                notas_text = notas_text.strip()
+                nota_obtida_text, nota_total_text = notas_text.split("/")
+                nota_obtida = self._parse_brazilian_number(nota_obtida_text)
+                nota_total = self._parse_brazilian_number(nota_total_text)
+                if nota_obtida == nota_total:
+                    print("Voce ja obteve nota maxima")
+                    return
+            
+            review: Locator = None
+            for t in tries:
+                review = t.get_by_title("Analise as suas respostas a esta tentativa")
+                if review.is_visible():
+                    break
+                
+            if review is None:
+                #raise ElementNotFound("Botao de acesso a revisao nao encontrado")
+                print("Realizando questoes com gemini, revisao nao encontrado...")
                 quiz_form = page.locator(".singlebutton.quizstartbuttondiv")
                 quizbtn = quiz_form.locator(".btn.btn-primary")
                 quizbtn.click()
                 self._do_questions()
                 self._submit_quiz()
+                return
+            
+            print("Coletando respostas da revisao...")
+            review.click()
+            self._get_answers()
+            page.goto(self.url)
 
-                break
-            else:...
+            print("Realizando questoes com as respostas da revisao...")
+            quiz_form = page.locator(".singlebutton.quizstartbuttondiv")
+            quizbtn = quiz_form.locator(".btn.btn-primary")
+            quizbtn.click()
+            self._do_questions()
+            self._submit_quiz()
+        else:
+            print("Realizando questoes com gemini...")
+            quiz_form = page.locator(".singlebutton.quizstartbuttondiv")
+            quizbtn = quiz_form.locator(".btn.btn-primary")
+            quizbtn.click()
+            self._do_questions()
+            self._submit_quiz()            
 
     def _parse_brazilian_number(self, value: str) -> float:
         return float(value.strip().replace(".", "").replace(",", "."))
@@ -121,6 +130,44 @@ class Quiz:
         submitbtn = form.locator("#mod_quiz-next-nav")
         submitbtn.click()
 
+    def _do_questions_gemini(self):
+        page = self.page
+
+        form = page.locator("#responseform")
+        questions = form.locator(".que.multichoice.deferredfeedback.notyetanswered").all()
+        for q in questions:
+            number = int(q.locator(".rui-qno").first.inner_text())
+            answer = self.reviews[number].answer
+
+            choices: Dict[str, QuizChoices] = {}
+            quest = q.locator(".qtext").inner_text()
+            answer_container = q.locator(".answer")
+            choice_rows = answer_container.locator("> div").all()
+            for row in choice_rows:
+                radio_btn = row.locator('input[type="radio"]').first
+
+                letter_text = row.locator(".answernumber").inner_text().strip()
+                letter = letter_text.replace(".", "").strip()
+
+                choice_text = row.locator(".flex-fill").inner_text().strip()
+
+                choices[letter] = QuizChoices(radio_btn, choice_text)
+
+            content = self._gen_gemini_content(quest, choices)
+
+            res = client.models.generate_content(
+                model="gemini-3.5-flash",
+                contents=content,
+            )
+            
+            try:
+                choices[res.text].radio_btn.check()
+            except KeyError:
+                choices["a"].radio_btn.check()                
+
+        submitbtn = form.locator("#mod_quiz-next-nav")
+        submitbtn.click()
+
     def _submit_quiz(self):
         print("Finalizando...")
         page = self.page
@@ -132,3 +179,10 @@ class Quiz:
         modal = page.locator(".modal-dialog.modal-dialog-scrollable")
         savebtn = modal.locator(".btn.btn-primary")
         savebtn.click()
+
+    def _gen_gemini_content(self, question: str, choices: Dict[str, QuizChoices]) -> str:
+        content = "Quero que responda a pergunta apenas com uma letra, sendo elas a, b, c, d ou e, conforme as alternativas oferecidas."
+        content += f"\nTema da pergunta: {self.theme}"
+        content += f"\n{question}"
+        for a, c in choices.items():
+            content += f"\n{a} - {c.text}"
