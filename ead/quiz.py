@@ -48,17 +48,18 @@ class Quiz:
             
             review: Locator = None
             for t in tries:
-                review = t.get_by_title("Analise as suas respostas a esta tentativa")
-                if review.is_visible():
+                r = t.get_by_title("Analise as suas respostas a esta tentativa")
+                if r.is_visible():
+                    review = r
                     break
                 
-            if review is None:
+            if review is None or not review.is_visible():
                 #raise ElementNotFound("Botao de acesso a revisao nao encontrado")
                 print("Realizando questoes com gemini, revisao nao encontrado...")
                 quiz_form = page.locator(".singlebutton.quizstartbuttondiv")
                 quizbtn = quiz_form.locator(".btn.btn-primary")
                 quizbtn.click()
-                self._do_questions()
+                self._do_questions_gemini()
                 self._submit_quiz()
                 return
             
@@ -78,7 +79,7 @@ class Quiz:
             quiz_form = page.locator(".singlebutton.quizstartbuttondiv")
             quizbtn = quiz_form.locator(".btn.btn-primary")
             quizbtn.click()
-            self._do_questions()
+            self._do_questions_gemini()
             self._submit_quiz()            
 
     def _parse_brazilian_number(self, value: str) -> float:
@@ -129,6 +130,12 @@ class Quiz:
 
         submitbtn = form.locator("#mod_quiz-next-nav")
         submitbtn.click()
+        # Finalizar tentativa ...
+        # Próxima página
+        submitbtn.click()
+        if submitbtn.input_value() == "Próxima página":
+            self._do_questions_gemini()
+            return
 
     def _do_questions_gemini(self):
         page = self.page
@@ -137,7 +144,6 @@ class Quiz:
         questions = form.locator(".que.multichoice.deferredfeedback.notyetanswered").all()
         for q in questions:
             number = int(q.locator(".rui-qno").first.inner_text())
-            answer = self.reviews[number].answer
 
             choices: Dict[str, QuizChoices] = {}
             quest = q.locator(".qtext").inner_text()
@@ -156,7 +162,7 @@ class Quiz:
             content = self._gen_gemini_content(quest, choices)
 
             res = client.models.generate_content(
-                model="gemini-3.5-flash",
+                model="gemini-3.1-flash-lite",
                 contents=content,
             )
             
@@ -166,7 +172,12 @@ class Quiz:
                 choices["a"].radio_btn.check()                
 
         submitbtn = form.locator("#mod_quiz-next-nav")
+        # Finalizar tentativa ...
+        # Próxima página
         submitbtn.click()
+        if submitbtn.input_value() == "Próxima página":
+            self._do_questions_gemini()
+            return
 
     def _submit_quiz(self):
         print("Finalizando...")
@@ -186,3 +197,5 @@ class Quiz:
         content += f"\n{question}"
         for a, c in choices.items():
             content += f"\n{a} - {c.text}"
+
+        return content
