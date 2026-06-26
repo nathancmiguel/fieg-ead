@@ -42,7 +42,7 @@ GEMINI_API_KEY=SEU_API_KEY
 
 ```
 
-# Como funciona
+## Como funciona
 
 - O scrapper é dividido em modulos que podem ser executados independentes.
 - A ordem de execucao e:
