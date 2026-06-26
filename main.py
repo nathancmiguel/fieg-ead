@@ -6,6 +6,7 @@ with sync_playwright() as pw:
     navegador: Browser = pw.chromium.launch(headless=False)
     ctx = navegador.new_context()
     pagina: Page = ctx.new_page()
+    pagina.set_default_timeout(120000)
 
     # Login page
     pagina.goto("https://ead.fieg.com.br/login/index.php")
