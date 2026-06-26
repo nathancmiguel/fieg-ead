@@ -41,3 +41,14 @@ SENHA=SUA_SENHA
 GEMINI_API_KEY=SEU_API_KEY
 
 ```
+
+# Como funciona
+
+- O scrapper é dividido em modulos que podem ser executados independentes.
+- A ordem de execucao e:
+    1.Login
+    2.Selecionar curso/modulo
+    3.Selecionar avaliação
+    4.Fazer avaliação
+- Caso a nota nao seja maxima na primeira tentativa(feita com gemini), seleciona a avaliação novamente que o scrapper ira ler as respostas da revisao e refazer as questoes.
+- Caso o scrapper nao consiga fazer a avaliação por conta de algum erro no meio do caminho, voce pode terminar de fazer manualmente.
