@@ -17,7 +17,11 @@ class Curso:
         self.url = pagina.url
         self.tema = tema
 
-    def buscar_avaliacoes(self):
+    def navegar(self):
+        self._buscar_avaliacoes()
+        self._menu_avaliacao()
+
+    def _buscar_avaliacoes(self):
         pagina = self.pagina
         avaliacoes: list[AvaInfo] = []
 
@@ -62,7 +66,7 @@ class Curso:
             raise ElementNotFound("Nenhuma avaliação foi encontrada!")
         self.avaliacoes = avaliacoes
 
-    def selecionar_curso(self):
+    def _menu_avaliacao(self):
         opts: Dict[int, AvaInfo] = {
             index + 1: item for index, item in enumerate(self.avaliacoes)
         }

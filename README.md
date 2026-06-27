@@ -10,11 +10,8 @@ Web scrapper para automatizar umas ações de um site
 # Cria o setup do projeto
 ./setup.sh
 
-# Ativa o ambiente virtual caso nao esteja ativado
-source .venv/bin/activate
-
 # Executa o scrapper
-python main.py
+./run.sh
 ```
 
 ## Windows
@@ -23,11 +20,8 @@ python main.py
 # Cria o setup do projeto
 .\setup.bat
 
-# Ativa o ambiente virtual caso nao esteja ativado
-.venv\Scripts\activate.bat
-
 # Executa o scrapper
-python main.py
+.\run.bat
 ```
 ## Dotenv
 

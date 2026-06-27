@@ -15,8 +15,13 @@ class Home:
         self.pagina = pagina
         self.url = pagina.url
         self.cursos: list[CursoInfo] = []
+
+    def navegar(self):
+        self._fazer_login()
+        self._buscar_cursos()
+        self._menu_curso()
     
-    def fazer_login(self):
+    def _fazer_login(self):
         print(f"Realizando login!")
         pagina = self.pagina
 
@@ -34,7 +39,7 @@ class Home:
         if pagina.url != "https://ead.fieg.com.br":
             pagina.goto("https://ead.fieg.com.br")
 
-    def buscar_cursos(self):
+    def _buscar_cursos(self):
         print(f"Carregando cursos")
         pagina = self.pagina
         cards = pagina.locator(".card.dashboard-card").all()
@@ -46,7 +51,7 @@ class Home:
             l = c.locator(".aalink.coursename.mr-2.mb-1")
             self.cursos.append(CursoInfo(l.inner_text(), l.get_attribute("href")))
 
-    def seletor_curso(self):
+    def _menu_curso(self):
         opts: Dict[int, CursoInfo] = {
             index + 1: item for index, item in enumerate(self.cursos)
         }
