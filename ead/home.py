@@ -82,8 +82,7 @@ class Home:
             clear_console()
 
             curso_pagina = Curso(self.pagina, curso.titulo)
-            curso_pagina.buscar_avaliacoes()
-            curso_pagina.selecionar_curso()
+            curso_pagina.navegar()
 
             self.pagina.goto(self.url)
             

@@ -13,11 +13,7 @@ with sync_playwright() as pw:
     print(f"Entering with your account!")
     home = Home(pagina)
     try:
-        home.fazer_login()
-
-        # Course page
-        home.buscar_cursos()
-        home.seletor_curso()
+        home.navegar()
     except RedirectError as e:
         print(e)
     except ElementNotFound as e:
